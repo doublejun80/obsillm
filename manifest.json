@@ -1,0 +1,10 @@
+﻿{
+  "id": "obsillm",
+  "name": "ObsiLLM",
+  "version": "0.1.0",
+  "minAppVersion": "1.6.0",
+  "description": "Grounded note drafting, vault retrieval, and web-assisted answers with OpenAI and Gemini.",
+  "author": "Codex",
+  "authorUrl": "https://openai.com",
+  "isDesktopOnly": true
+}

@@ -1,0 +1,246 @@
+﻿.obsillm-view {
+  --obsillm-panel: linear-gradient(180deg, rgba(17, 34, 51, 0.08), rgba(17, 34, 51, 0.02));
+  --obsillm-accent: #0e7490;
+  --obsillm-accent-strong: #155e75;
+  --obsillm-border: color-mix(in srgb, var(--background-modifier-border) 72%, var(--obsillm-accent) 28%);
+  --obsillm-soft: color-mix(in srgb, var(--background-secondary) 88%, var(--obsillm-accent) 12%);
+  --obsillm-user: color-mix(in srgb, var(--interactive-accent) 14%, var(--background-secondary) 86%);
+  --obsillm-assistant: color-mix(in srgb, var(--obsillm-accent) 10%, var(--background-primary) 90%);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  height: 100%;
+  padding: 1rem;
+  background:
+    radial-gradient(circle at top right, rgba(14, 116, 144, 0.12), transparent 38%),
+    linear-gradient(180deg, rgba(14, 116, 144, 0.05), transparent 24%);
+}
+
+.obsillm-hero {
+  padding: 1rem;
+  border: 1px solid var(--obsillm-border);
+  border-radius: 18px;
+  background: var(--obsillm-panel);
+}
+
+.obsillm-hero h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  letter-spacing: 0.02em;
+}
+
+.obsillm-hero p {
+  margin: 0.45rem 0 0;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.obsillm-controls,
+.obsillm-composer,
+.obsillm-transcript {
+  border: 1px solid var(--obsillm-border);
+  border-radius: 18px;
+  background: var(--background-primary);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.05);
+}
+
+.obsillm-controls {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+}
+
+.obsillm-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.obsillm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.obsillm-field label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.obsillm-field input,
+.obsillm-field select,
+.obsillm-composer textarea {
+  width: 100%;
+  border: 1px solid var(--obsillm-border);
+  border-radius: 12px;
+  background: var(--background-primary-alt);
+  color: var(--text-normal);
+  padding: 0.7rem 0.8rem;
+  font: inherit;
+}
+
+.obsillm-toggle-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.obsillm-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--obsillm-border);
+  background: var(--obsillm-soft);
+  font-weight: 600;
+}
+
+.obsillm-composer {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.obsillm-composer textarea {
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.obsillm-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.obsillm-actions button,
+.obsillm-card-actions button {
+  border: none;
+  border-radius: 999px;
+  padding: 0.6rem 1rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease, opacity 120ms ease;
+}
+
+.obsillm-primary {
+  background: linear-gradient(135deg, var(--obsillm-accent), var(--obsillm-accent-strong));
+  color: white;
+}
+
+.obsillm-secondary {
+  background: var(--obsillm-soft);
+  color: var(--text-normal);
+}
+
+.obsillm-actions button:hover,
+.obsillm-card-actions button:hover {
+  transform: translateY(-1px);
+}
+
+.obsillm-status {
+  min-height: 1.25rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.obsillm-transcript {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.obsillm-empty {
+  padding: 1.2rem;
+  border-radius: 16px;
+  background: var(--obsillm-panel);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.obsillm-message {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.obsillm-message-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.obsillm-message-body {
+  border-radius: 16px;
+  border: 1px solid var(--obsillm-border);
+  padding: 0.95rem;
+  line-height: 1.6;
+}
+
+.obsillm-message-user .obsillm-message-body {
+  background: var(--obsillm-user);
+}
+
+.obsillm-message-assistant .obsillm-message-body {
+  background: var(--obsillm-assistant);
+}
+
+.obsillm-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.obsillm-citations {
+  display: grid;
+  gap: 0.35rem;
+  padding-top: 0.25rem;
+}
+
+.obsillm-citations strong {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.obsillm-citations ul {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.obsillm-citations li {
+  margin: 0.2rem 0;
+}
+
+.obsillm-citations button.link-like {
+  border: none;
+  background: none;
+  color: var(--link-color);
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.obsillm-error {
+  color: var(--text-error);
+}
+
+@media (max-width: 700px) {
+  .obsillm-grid {
+    grid-template-columns: 1fr;
+  }
+}
