@@ -115,6 +115,20 @@ function parseOpenAIResponse(payload) {
         citations: extractOpenAICitations(payload),
     };
 }
+function sanitizeProviderErrorDetail(detail) {
+    const cleaned = detail?.replace(/\s+/g, " ").replace(/raw payload:.*$/i, "").trim();
+    return cleaned ? cleaned.slice(0, 240) : undefined;
+}
+function extractOpenAIErrorMessage(payload) {
+    if (!payload || typeof payload !== "object") {
+        return undefined;
+    }
+    const record = payload;
+    const nestedError = record.error && typeof record.error === "object"
+        ? sanitizeProviderErrorDetail(record.error.message)
+        : undefined;
+    return nestedError ?? sanitizeProviderErrorDetail(record.message);
+}
 class OpenAIProviderAdapter {
     constructor(settings) {
         this.settings = settings;
@@ -155,12 +169,13 @@ class OpenAIProviderAdapter {
             payload = response.json;
         }
         catch (error) {
-            const detail = error instanceof Error ? error.message : String(error);
-            throw new Error(`OpenAI request failed: ${detail}`);
+            const detail = sanitizeProviderErrorDetail(error instanceof Error ? error.message : String(error));
+            throw new Error(detail ? `OpenAI request failed: ${detail}` : "OpenAI request failed.");
         }
         const parsed = parseOpenAIResponse(payload ?? {});
         if (!parsed.text) {
-            throw new Error(`OpenAI returned an empty response. Raw payload: ${responseText.slice(0, 500)}`);
+            const errorMessage = extractOpenAIErrorMessage(payload) ?? extractOpenAIErrorMessage(safeParseJson(responseText));
+            throw new Error(errorMessage ? `OpenAI returned no answer: ${errorMessage}` : "OpenAI returned no answer.");
         }
         const envelope = (0, prompting_1.buildProviderPrompt)(request.prompt, request.retrieval);
         return {
@@ -173,3 +188,11 @@ class OpenAIProviderAdapter {
     }
 }
 exports.OpenAIProviderAdapter = OpenAIProviderAdapter;
+function safeParseJson(text) {
+    try {
+        return JSON.parse(text);
+    }
+    catch {
+        return undefined;
+    }
+}

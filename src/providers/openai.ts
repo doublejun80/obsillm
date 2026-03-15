@@ -8,6 +8,10 @@ import type { ChatRequest, ChatResponse, Citation, ProviderAdapter, ProviderSett
 interface OpenAIResponsePayload {
   output_text?: string;
   output?: unknown[];
+  error?: {
+    message?: string;
+  };
+  message?: string;
 }
 
 export interface OpenAIRequestBody {
@@ -152,6 +156,25 @@ export function parseOpenAIResponse(payload: OpenAIResponsePayload): { text: str
   };
 }
 
+function sanitizeProviderErrorDetail(detail: string | undefined): string | undefined {
+  const cleaned = detail?.replace(/\s+/g, " ").replace(/raw payload:.*$/i, "").trim();
+  return cleaned ? cleaned.slice(0, 240) : undefined;
+}
+
+function extractOpenAIErrorMessage(payload: unknown): string | undefined {
+  if (!payload || typeof payload !== "object") {
+    return undefined;
+  }
+
+  const record = payload as Record<string, unknown>;
+  const nestedError =
+    record.error && typeof record.error === "object"
+      ? sanitizeProviderErrorDetail((record.error as Record<string, unknown>).message as string | undefined)
+      : undefined;
+
+  return nestedError ?? sanitizeProviderErrorDetail(record.message as string | undefined);
+}
+
 export class OpenAIProviderAdapter implements ProviderAdapter {
   readonly id = "openai" as const;
   readonly displayName = "OpenAI";
@@ -195,13 +218,14 @@ export class OpenAIProviderAdapter implements ProviderAdapter {
       responseText = response.text;
       payload = response.json as OpenAIResponsePayload;
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      throw new Error(`OpenAI request failed: ${detail}`);
+      const detail = sanitizeProviderErrorDetail(error instanceof Error ? error.message : String(error));
+      throw new Error(detail ? `OpenAI request failed: ${detail}` : "OpenAI request failed.");
     }
 
     const parsed = parseOpenAIResponse(payload ?? {});
     if (!parsed.text) {
-      throw new Error(`OpenAI returned an empty response. Raw payload: ${responseText.slice(0, 500)}`);
+      const errorMessage = extractOpenAIErrorMessage(payload) ?? extractOpenAIErrorMessage(safeParseJson(responseText));
+      throw new Error(errorMessage ? `OpenAI returned no answer: ${errorMessage}` : "OpenAI returned no answer.");
     }
 
     const envelope = buildProviderPrompt(request.prompt, request.retrieval);
@@ -212,5 +236,13 @@ export class OpenAIProviderAdapter implements ProviderAdapter {
       citations: uniqueCitations([...envelope.vaultCitations, ...parsed.citations]),
       raw: payload,
     };
+  }
+}
+
+function safeParseJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
   }
 }

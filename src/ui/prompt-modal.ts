@@ -1,4 +1,11 @@
-﻿import { ButtonComponent, Modal, TextAreaComponent } from "obsidian";
+import { ButtonComponent, Modal, TextAreaComponent } from "obsidian";
+
+interface PromptModalOptions {
+  placeholder?: string;
+  submitText?: string;
+  cancelText?: string;
+  rows?: number;
+}
 
 export class PromptModal extends Modal {
   private resolved = false;
@@ -9,7 +16,7 @@ export class PromptModal extends Modal {
     app: Modal["app"],
     private readonly title: string,
     private readonly initialValue = "",
-    private readonly placeholder = "Ask ObsiLLM…",
+    private readonly options: PromptModalOptions = {},
   ) {
     super(app);
   }
@@ -28,19 +35,19 @@ export class PromptModal extends Modal {
     contentEl.createEl("h2", { text: this.title });
     this.textArea = new TextAreaComponent(contentEl);
     this.textArea
-      .setPlaceholder(this.placeholder)
+      .setPlaceholder(this.options.placeholder ?? "Ask ObsiLLM...")
       .setValue(this.initialValue)
       .inputEl.addClass("obsillm-prompt-modal");
-    this.textArea.inputEl.rows = 8;
+    this.textArea.inputEl.rows = this.options.rows ?? 8;
     this.textArea.inputEl.focus();
 
     const actions = contentEl.createDiv({ cls: "obsillm-actions" });
     new ButtonComponent(actions)
-      .setButtonText("Cancel")
+      .setButtonText(this.options.cancelText ?? "Cancel")
       .setClass("obsillm-secondary")
       .onClick(() => this.finish(null));
     new ButtonComponent(actions)
-      .setButtonText("Submit")
+      .setButtonText(this.options.submitText ?? "Submit")
       .setClass("obsillm-primary")
       .onClick(() => this.finish(this.textArea.getValue().trim() || null));
   }
@@ -60,5 +67,3 @@ export class PromptModal extends Modal {
     this.resolver?.(value);
   }
 }
-
-

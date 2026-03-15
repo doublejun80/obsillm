@@ -70,7 +70,7 @@ test('OpenAI response parser extracts grounded citations', () => {
 test('Gemini request enables google_search grounding', () => {
   const request = buildGeminiRequest({
     provider: 'gemini',
-    model: 'gemini-3-pro-preview',
+    model: 'gemini-2.5-flash-lite',
     prompt: 'Compare the active note with current public information.',
     systemPrompt: 'System instruction',
     retrieval: {
@@ -189,7 +189,7 @@ test('Insertion helpers replace selected text', () => {
   assert.equal(next.document, 'Hello ObsiLLM');
 });
 
-test('Insertion markdown appends sources', () => {
+test('Insertion markdown returns plain text by default', () => {
   const markdown = buildInsertionMarkdown({
     provider: 'openai',
     model: 'gpt-5.2-codex',
@@ -209,6 +209,30 @@ test('Insertion markdown appends sources', () => {
       },
     ],
   });
+
+  assert.equal(markdown, 'Draft answer');
+});
+
+test('Insertion markdown appends sources when requested', () => {
+  const markdown = buildInsertionMarkdown({
+    provider: 'openai',
+    model: 'gpt-5.2-codex',
+    text: 'Draft answer',
+    citations: [
+      {
+        id: 'vault:Notes/Plan.md',
+        source: 'vault',
+        title: 'Plan',
+        filePath: 'Notes/Plan.md',
+      },
+      {
+        id: 'web:https://example.com',
+        source: 'web',
+        title: 'Example',
+        url: 'https://example.com',
+      },
+    ],
+  }, 'en', true);
 
   assert.ok(markdown.includes('## Sources'));
   assert.ok(markdown.includes('[[Notes/Plan|Plan]]'));

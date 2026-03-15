@@ -1,4 +1,4 @@
-﻿import { App, Component, MarkdownRenderer, TFile, normalizePath } from "obsidian";
+import { App, Component, MarkdownRenderer, TFile, normalizePath } from "obsidian";
 
 import type { Citation } from "./types";
 
@@ -69,6 +69,23 @@ export function createVaultCitation(filePath: string, title: string, excerpt?: s
   };
 }
 
+export function getSafeExternalUrl(value: string | null | undefined): string | null {
+  if (!value?.trim()) {
+    return null;
+  }
+
+  try {
+    const url = new URL(value);
+    if (url.protocol === "http:" || url.protocol === "https:") {
+      return url.toString();
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
 export function citationToMarkdown(citation: Citation): string {
   if (citation.source === "vault" && citation.filePath) {
     const wikiPath = citation.filePath.replace(/\.md$/i, "");
@@ -76,8 +93,8 @@ export function citationToMarkdown(citation: Citation): string {
     return `- [[${wikiPath}|${citation.title}]]${detail}`;
   }
 
-  const url = citation.url ?? "";
-  return `- [${citation.title}](${url})`;
+  const url = getSafeExternalUrl(citation.url);
+  return url ? `- [${citation.title}](${url})` : `- ${citation.title}`;
 }
 
 export async function renderMarkdownCompat(
@@ -116,6 +133,22 @@ export async function renderMarkdownCompat(
   container.setText(markdown);
 }
 
+export async function ensureFolderExists(app: App, folderPath: string): Promise<void> {
+  const normalized = normalizePath(folderPath.trim());
+  if (!normalized) {
+    return;
+  }
+
+  const parts = normalized.split("/").filter(Boolean);
+  let current = "";
+  for (const part of parts) {
+    current = current ? `${current}/${part}` : part;
+    if (!app.vault.getAbstractFileByPath(current)) {
+      await app.vault.createFolder(current);
+    }
+  }
+}
+
 export async function findOrCreateAvailablePath(app: App, proposedPath: string): Promise<string> {
   const normalized = normalizePath(proposedPath);
   const existing = app.vault.getAbstractFileByPath(normalized);
@@ -132,6 +165,24 @@ export async function findOrCreateAvailablePath(app: App, proposedPath: string):
     index += 1;
   }
   return `${base} ${index}${extension}`;
+}
+
+export async function copyTextToClipboard(text: string): Promise<void> {
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const electronRequire = (window as Window & { require?: (name: string) => unknown }).require;
+  if (typeof electronRequire === "function") {
+    const electron = electronRequire("electron") as { clipboard?: { writeText: (value: string) => void } };
+    if (electron.clipboard) {
+      electron.clipboard.writeText(text);
+      return;
+    }
+  }
+
+  throw new Error("Clipboard is unavailable.");
 }
 
 export function slugifyTitle(value: string): string {

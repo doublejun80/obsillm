@@ -8,9 +8,12 @@ exports.tokenize = tokenize;
 exports.countTermOccurrences = countTermOccurrences;
 exports.uniqueCitations = uniqueCitations;
 exports.createVaultCitation = createVaultCitation;
+exports.getSafeExternalUrl = getSafeExternalUrl;
 exports.citationToMarkdown = citationToMarkdown;
 exports.renderMarkdownCompat = renderMarkdownCompat;
+exports.ensureFolderExists = ensureFolderExists;
 exports.findOrCreateAvailablePath = findOrCreateAvailablePath;
+exports.copyTextToClipboard = copyTextToClipboard;
 exports.slugifyTitle = slugifyTitle;
 exports.maybeFile = maybeFile;
 const obsidian_1 = require("obsidian");
@@ -70,14 +73,29 @@ function createVaultCitation(filePath, title, excerpt) {
         excerpt,
     };
 }
+function getSafeExternalUrl(value) {
+    if (!value?.trim()) {
+        return null;
+    }
+    try {
+        const url = new URL(value);
+        if (url.protocol === "http:" || url.protocol === "https:") {
+            return url.toString();
+        }
+    }
+    catch {
+        return null;
+    }
+    return null;
+}
 function citationToMarkdown(citation) {
     if (citation.source === "vault" && citation.filePath) {
         const wikiPath = citation.filePath.replace(/\.md$/i, "");
         const detail = citation.excerpt ? ` - ${citation.excerpt}` : "";
         return `- [[${wikiPath}|${citation.title}]]${detail}`;
     }
-    const url = citation.url ?? "";
-    return `- [${citation.title}](${url})`;
+    const url = getSafeExternalUrl(citation.url);
+    return url ? `- [${citation.title}](${url})` : `- ${citation.title}`;
 }
 async function renderMarkdownCompat(app, markdown, container, sourcePath, component) {
     const renderer = obsidian_1.MarkdownRenderer;
@@ -90,6 +108,20 @@ async function renderMarkdownCompat(app, markdown, container, sourcePath, compon
         return;
     }
     container.setText(markdown);
+}
+async function ensureFolderExists(app, folderPath) {
+    const normalized = (0, obsidian_1.normalizePath)(folderPath.trim());
+    if (!normalized) {
+        return;
+    }
+    const parts = normalized.split("/").filter(Boolean);
+    let current = "";
+    for (const part of parts) {
+        current = current ? `${current}/${part}` : part;
+        if (!app.vault.getAbstractFileByPath(current)) {
+            await app.vault.createFolder(current);
+        }
+    }
 }
 async function findOrCreateAvailablePath(app, proposedPath) {
     const normalized = (0, obsidian_1.normalizePath)(proposedPath);
@@ -105,6 +137,21 @@ async function findOrCreateAvailablePath(app, proposedPath) {
         index += 1;
     }
     return `${base} ${index}${extension}`;
+}
+async function copyTextToClipboard(text) {
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+    }
+    const electronRequire = window.require;
+    if (typeof electronRequire === "function") {
+        const electron = electronRequire("electron");
+        if (electron.clipboard) {
+            electron.clipboard.writeText(text);
+            return;
+        }
+    }
+    throw new Error("Clipboard is unavailable.");
 }
 function slugifyTitle(value) {
     const cleaned = value

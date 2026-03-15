@@ -60,6 +60,11 @@
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  min-width: 0;
+}
+
+.obsillm-field-full {
+  grid-column: 1 / -1;
 }
 
 .obsillm-field label {
@@ -80,6 +85,51 @@
   color: var(--text-normal);
   padding: 0.7rem 0.8rem;
   font: inherit;
+}
+
+.obsillm-field select {
+  min-height: 2.8rem;
+  padding-right: 2.25rem;
+  font-size: 0.95rem;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+}
+
+.obsillm-model-field select {
+  width: 100%;
+}
+
+@media (max-width: 720px) {
+  .obsillm-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .obsillm-field-full {
+    grid-column: auto;
+  }
+}
+
+.obsillm-provider-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.obsillm-provider-button {
+  border: 1px solid var(--obsillm-border);
+  border-radius: 12px;
+  background: var(--background-primary-alt);
+  color: var(--text-normal);
+  padding: 0.75rem 0.9rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.obsillm-provider-button.is-active {
+  background: linear-gradient(135deg, var(--obsillm-accent), var(--obsillm-accent-strong));
+  color: white;
+  border-color: transparent;
 }
 
 .obsillm-toggle-row {
@@ -152,7 +202,8 @@
 .obsillm-transcript {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -170,6 +221,8 @@
 .obsillm-message {
   display: grid;
   gap: 0.55rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .obsillm-message-header {
@@ -181,6 +234,19 @@
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.obsillm-message-header > * {
+  min-width: 0;
+}
+
+.obsillm-message-header span:last-child {
+  margin-left: auto;
+  text-align: right;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .obsillm-message-body {
@@ -188,6 +254,32 @@
   border: 1px solid var(--obsillm-border);
   padding: 0.95rem;
   line-height: 1.6;
+  user-select: text;
+  -webkit-user-select: text;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.obsillm-message-body * {
+  user-select: text;
+  -webkit-user-select: text;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.obsillm-message-body pre,
+.obsillm-message-body code {
+  white-space: pre-wrap;
+}
+
+.obsillm-message-user .obsillm-message-body,
+.obsillm-message-user .obsillm-message-body * {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .obsillm-message-user .obsillm-message-body {
@@ -202,12 +294,16 @@
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .obsillm-citations {
   display: grid;
   gap: 0.35rem;
   padding-top: 0.25rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .obsillm-citations strong {
@@ -220,10 +316,14 @@
 .obsillm-citations ul {
   margin: 0;
   padding-left: 1rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .obsillm-citations li {
   margin: 0.2rem 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .obsillm-citations button.link-like {

@@ -1,4 +1,4 @@
-﻿# ObsiLLM
+# ObsiLLM
 
 ObsiLLM is an Obsidian desktop plugin that combines:
 
@@ -12,33 +12,45 @@ ObsiLLM is an Obsidian desktop plugin that combines:
 - OpenAI and Gemini provider switching from the sidebar
 - Web toggle and vault retrieval toggle per request
 - Inline answer preview with a citations list
-- Insert at cursor, replace selection, and create-note actions
+- Copy, insert into the current note, replace selection, and save-to-folder actions
 - Command palette shortcuts for current-note workflows
 
-## Verified defaults
+## Defaults in this repo
 
-- OpenAI default model: `gpt-5.2-codex`
-- Gemini default model: `gemini-3-pro-preview`
-- Gemini stable fallback: `gemini-2.5-pro`
+- OpenAI default model: `gpt-5-mini`
+- Gemini default model: `gemini-2.5-flash-lite`
+- Gemini editable alternative: `gemini-2.5-flash`
 
-The plugin keeps the model field editable because model names can change over time.
+The model fields stay editable because provider model names can change.
 
 ## Development
 
-Install dependencies:
+Requires Node.js 20+.
 
 ```bash
 npm install
-```
-
-Build:
-
-```bash
+npm run typecheck
+npm test
 npm run build
 ```
 
-Test:
+`npm run build` now produces a bundled root `main.js` for Obsidian installation.
 
-```bash
-npm test
+## Install in Obsidian
+
+1. Build the plugin.
+2. Open your vault folder.
+3. Create this folder if it does not exist: `.obsidian/plugins/obsillm`
+4. Copy these files into that folder:
+   - `main.js`
+   - `manifest.json`
+   - `styles.css`
+5. In Obsidian, open `Settings -> Community plugins`, refresh if needed, then enable `ObsiLLM`.
+
+Example vault-relative install path:
+
+```text
+<your-vault>/.obsidian/plugins/obsillm/
 ```
+
+The checked-in root `main.js` is bundled for Obsidian, so the usual install only needs `main.js`, `manifest.json`, and `styles.css`.

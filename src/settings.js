@@ -2,19 +2,23 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ObsiLLMSettingTab = exports.DEFAULT_SETTINGS = void 0;
 const obsidian_1 = require("obsidian");
+const i18n_1 = require("./i18n");
+const model_options_1 = require("./model-options");
 exports.DEFAULT_SETTINGS = {
+    language: "ko",
     defaultProvider: "openai",
     openai: {
         apiKey: "",
-        model: "gpt-5.2-codex",
+        model: "gpt-5-mini",
     },
     gemini: {
         apiKey: "",
-        model: "gemini-3-pro-preview",
+        model: "gemini-2.5-flash-lite",
     },
-    systemPrompt: "You are ObsiLLM, an Obsidian writing assistant. Write concise, grounded Markdown. Prefer provided vault context when it is relevant, and clearly separate note-derived context from live web information.",
+    systemPrompt: (0, i18n_1.getDefaultSystemPrompt)("ko"),
     defaultUseVault: true,
     defaultUseWeb: true,
+    defaultIncludeSources: false,
     maxVaultResults: 5,
     chunkSize: 1200,
     chunkOverlap: 180,
@@ -26,15 +30,31 @@ class ObsiLLMSettingTab extends obsidian_1.PluginSettingTab {
         this.plugin = plugin;
     }
     display() {
+        const strings = (0, i18n_1.getStrings)(this.plugin.settings.language);
         const { containerEl } = this;
         containerEl.empty();
-        containerEl.createEl("h2", { text: "ObsiLLM Settings" });
+        containerEl.createEl("h2", { text: strings.settingsTitle });
         containerEl.createEl("p", {
-            text: "Use exact model IDs from the provider docs when you want to override the defaults.",
+            text: strings.settingsDescription,
         });
         new obsidian_1.Setting(containerEl)
-            .setName("Default provider")
-            .setDesc("Pick the provider used when the chat panel opens.")
+            .setName(strings.language)
+            .setDesc(strings.languageDescription)
+            .addDropdown((dropdown) => dropdown
+            .addOption("en", strings.languageEn)
+            .addOption("ko", strings.languageKo)
+            .addOption("jp", strings.languageJp)
+            .setValue(this.plugin.settings.language)
+            .onChange(async (value) => {
+            this.plugin.settings.language = value;
+            this.plugin.settings.systemPrompt = (0, i18n_1.getDefaultSystemPrompt)(this.plugin.settings.language);
+            await this.plugin.saveSettings();
+            await this.plugin.refreshChatViews();
+            this.display();
+        }));
+        new obsidian_1.Setting(containerEl)
+            .setName(strings.defaultProvider)
+            .setDesc(strings.defaultProviderDescription)
             .addDropdown((dropdown) => dropdown
             .addOption("openai", "OpenAI")
             .addOption("gemini", "Gemini")
@@ -42,71 +62,88 @@ class ObsiLLMSettingTab extends obsidian_1.PluginSettingTab {
             .onChange(async (value) => {
             this.plugin.settings.defaultProvider = value;
             await this.plugin.saveSettings();
+            await this.plugin.refreshChatViews();
         }));
         new obsidian_1.Setting(containerEl)
-            .setName("OpenAI API key")
-            .setDesc("Stored locally in Obsidian plugin settings.")
-            .addText((text) => text
-            .setPlaceholder("sk-...")
-            .setValue(this.plugin.settings.openai.apiKey)
-            .onChange(async (value) => {
-            this.plugin.settings.openai.apiKey = value.trim();
-            await this.plugin.saveSettings();
-        }));
+            .setName(strings.openaiApiKey)
+            .setDesc(strings.openaiApiKeyDescription)
+            .addText((text) => {
+            text.inputEl.type = "password";
+            return text
+                .setPlaceholder("sk-...")
+                .setValue(this.plugin.settings.openai.apiKey)
+                .onChange(async (value) => {
+                this.plugin.settings.openai.apiKey = value.trim();
+                await this.plugin.saveSettings();
+            });
+        });
         new obsidian_1.Setting(containerEl)
-            .setName("OpenAI model")
-            .setDesc("Default: gpt-5.2-codex. The field stays editable for future model changes.")
-            .addText((text) => text
+            .setName(strings.openaiModel)
+            .setDesc(strings.openaiModelDescription)
+            .addDropdown((dropdown) => model_options_1.OPENAI_MODEL_OPTIONS.reduce((current, model) => current.addOption(model, model), dropdown)
             .setValue(this.plugin.settings.openai.model)
-            .setPlaceholder("gpt-5.2-codex")
             .onChange(async (value) => {
-            this.plugin.settings.openai.model = value.trim();
+            this.plugin.settings.openai.model = value;
             await this.plugin.saveSettings();
+            await this.plugin.refreshChatViews();
         }));
         new obsidian_1.Setting(containerEl)
-            .setName("Gemini API key")
-            .setDesc("Stored locally in Obsidian plugin settings.")
-            .addText((text) => text
-            .setPlaceholder("AIza...")
-            .setValue(this.plugin.settings.gemini.apiKey)
-            .onChange(async (value) => {
-            this.plugin.settings.gemini.apiKey = value.trim();
-            await this.plugin.saveSettings();
-        }));
+            .setName(strings.geminiApiKey)
+            .setDesc(strings.geminiApiKeyDescription)
+            .addText((text) => {
+            text.inputEl.type = "password";
+            return text
+                .setPlaceholder("AIza...")
+                .setValue(this.plugin.settings.gemini.apiKey)
+                .onChange(async (value) => {
+                this.plugin.settings.gemini.apiKey = value.trim();
+                await this.plugin.saveSettings();
+            });
+        });
         new obsidian_1.Setting(containerEl)
-            .setName("Gemini model")
-            .setDesc("Default: gemini-3-pro-preview. Stable fallback: gemini-2.5-pro.")
-            .addText((text) => text
+            .setName(strings.geminiModel)
+            .setDesc(strings.geminiModelDescription)
+            .addDropdown((dropdown) => model_options_1.GEMINI_MODEL_OPTIONS.reduce((current, model) => current.addOption(model, model), dropdown)
             .setValue(this.plugin.settings.gemini.model)
-            .setPlaceholder("gemini-3-pro-preview")
             .onChange(async (value) => {
-            this.plugin.settings.gemini.model = value.trim();
+            this.plugin.settings.gemini.model = value;
             await this.plugin.saveSettings();
+            await this.plugin.refreshChatViews();
         }));
         new obsidian_1.Setting(containerEl)
-            .setName("System prompt")
-            .setDesc("Global instruction applied to both providers.")
+            .setName(strings.systemPrompt)
+            .setDesc(strings.systemPromptDescription)
             .addTextArea((text) => text.setValue(this.plugin.settings.systemPrompt).onChange(async (value) => {
             this.plugin.settings.systemPrompt = value.trim();
             await this.plugin.saveSettings();
         }));
         new obsidian_1.Setting(containerEl)
-            .setName("Default vault retrieval")
-            .setDesc("Enable vault retrieval when the sidebar opens.")
+            .setName(strings.defaultVaultRetrieval)
+            .setDesc(strings.defaultVaultRetrievalDescription)
             .addToggle((toggle) => toggle.setValue(this.plugin.settings.defaultUseVault).onChange(async (value) => {
             this.plugin.settings.defaultUseVault = value;
             await this.plugin.saveSettings();
+            await this.plugin.refreshChatViews();
         }));
         new obsidian_1.Setting(containerEl)
-            .setName("Default web grounding")
-            .setDesc("Enable web search / grounding by default.")
+            .setName(strings.defaultWebGrounding)
+            .setDesc(strings.defaultWebGroundingDescription)
             .addToggle((toggle) => toggle.setValue(this.plugin.settings.defaultUseWeb).onChange(async (value) => {
             this.plugin.settings.defaultUseWeb = value;
             await this.plugin.saveSettings();
+            await this.plugin.refreshChatViews();
         }));
         new obsidian_1.Setting(containerEl)
-            .setName("Max vault results")
-            .setDesc("How many vault chunks are provided to the model.")
+            .setName(strings.defaultIncludeSources)
+            .setDesc(strings.defaultIncludeSourcesDescription)
+            .addToggle((toggle) => toggle.setValue(this.plugin.settings.defaultIncludeSources).onChange(async (value) => {
+            this.plugin.settings.defaultIncludeSources = value;
+            await this.plugin.saveSettings();
+            await this.plugin.refreshChatViews();
+        }));
+        new obsidian_1.Setting(containerEl)
+            .setName(strings.maxVaultResults)
+            .setDesc(strings.maxVaultResultsDescription)
             .addSlider((slider) => slider
             .setLimits(1, 10, 1)
             .setValue(this.plugin.settings.maxVaultResults)
@@ -116,8 +153,8 @@ class ObsiLLMSettingTab extends obsidian_1.PluginSettingTab {
             await this.plugin.saveSettings();
         }));
         new obsidian_1.Setting(containerEl)
-            .setName("Chunk size")
-            .setDesc("Approximate character target for each vault chunk.")
+            .setName(strings.chunkSize)
+            .setDesc(strings.chunkSizeDescription)
             .addSlider((slider) => slider
             .setLimits(600, 2400, 50)
             .setValue(this.plugin.settings.chunkSize)
@@ -127,8 +164,8 @@ class ObsiLLMSettingTab extends obsidian_1.PluginSettingTab {
             await this.plugin.saveSettings();
         }));
         new obsidian_1.Setting(containerEl)
-            .setName("Chunk overlap")
-            .setDesc("Character overlap between adjacent chunks.")
+            .setName(strings.chunkOverlap)
+            .setDesc(strings.chunkOverlapDescription)
             .addSlider((slider) => slider
             .setLimits(0, 400, 10)
             .setValue(this.plugin.settings.chunkOverlap)
@@ -138,8 +175,8 @@ class ObsiLLMSettingTab extends obsidian_1.PluginSettingTab {
             await this.plugin.saveSettings();
         }));
         new obsidian_1.Setting(containerEl)
-            .setName("Create-note folder")
-            .setDesc("New drafts created from the chat panel are stored here.")
+            .setName(strings.createNoteFolder)
+            .setDesc(strings.createNoteFolderDescription)
             .addText((text) => text
             .setPlaceholder("ObsiLLM Drafts")
             .setValue(this.plugin.settings.createNoteFolder)

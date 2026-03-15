@@ -1,6 +1,7 @@
-﻿export type ProviderId = "openai" | "gemini";
+export type ProviderId = "openai" | "gemini";
+export type AppLanguage = "en" | "ko" | "jp";
 
-export type InsertionMode = "insert-cursor" | "replace-selection" | "create-note";
+export type InsertionMode = "insert-cursor" | "replace-selection" | "create-note" | "create-note-current-folder";
 
 export interface Citation {
   id: string;
@@ -73,12 +74,14 @@ export interface ProviderSettings {
 }
 
 export interface PluginSettings {
+  language: AppLanguage;
   defaultProvider: ProviderId;
   openai: ProviderSettings;
   gemini: ProviderSettings;
   systemPrompt: string;
   defaultUseVault: boolean;
   defaultUseWeb: boolean;
+  defaultIncludeSources: boolean;
   maxVaultResults: number;
   chunkSize: number;
   chunkOverlap: number;

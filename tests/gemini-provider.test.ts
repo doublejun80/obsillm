@@ -5,7 +5,7 @@ import type { ChatRequest } from "../src/types";
 
 const baseRequest: ChatRequest = {
   provider: "gemini",
-  model: "gemini-3-pro-preview",
+  model: "gemini-2.5-flash-lite",
   prompt: "Compare the active note with current public information.",
   systemPrompt: "System instruction",
   retrieval: {

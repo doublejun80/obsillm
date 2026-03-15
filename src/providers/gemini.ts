@@ -21,6 +21,10 @@ interface GeminiCandidate {
 
 interface GeminiResponsePayload {
   candidates?: GeminiCandidate[];
+  error?: {
+    message?: string;
+  };
+  message?: string;
 }
 
 export interface GeminiRequestBody {
@@ -79,6 +83,25 @@ export function parseGeminiResponse(payload: GeminiResponsePayload): { text: str
   };
 }
 
+function sanitizeProviderErrorDetail(detail: string | undefined): string | undefined {
+  const cleaned = detail?.replace(/\s+/g, " ").replace(/raw payload:.*$/i, "").trim();
+  return cleaned ? cleaned.slice(0, 240) : undefined;
+}
+
+function extractGeminiErrorMessage(payload: unknown): string | undefined {
+  if (!payload || typeof payload !== "object") {
+    return undefined;
+  }
+
+  const record = payload as Record<string, unknown>;
+  const nestedError =
+    record.error && typeof record.error === "object"
+      ? sanitizeProviderErrorDetail((record.error as Record<string, unknown>).message as string | undefined)
+      : undefined;
+
+  return nestedError ?? sanitizeProviderErrorDetail(record.message as string | undefined);
+}
+
 export class GeminiProviderAdapter implements ProviderAdapter {
   readonly id = "gemini" as const;
   readonly displayName = "Gemini";
@@ -123,13 +146,14 @@ export class GeminiProviderAdapter implements ProviderAdapter {
       responseText = response.text;
       payload = response.json as GeminiResponsePayload;
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      throw new Error(`Gemini request failed: ${detail}`);
+      const detail = sanitizeProviderErrorDetail(error instanceof Error ? error.message : String(error));
+      throw new Error(detail ? `Gemini request failed: ${detail}` : "Gemini request failed.");
     }
 
     const parsed = parseGeminiResponse(payload ?? {});
     if (!parsed.text) {
-      throw new Error(`Gemini returned an empty response. Raw payload: ${responseText.slice(0, 500)}`);
+      const errorMessage = extractGeminiErrorMessage(payload) ?? extractGeminiErrorMessage(safeParseJson(responseText));
+      throw new Error(errorMessage ? `Gemini returned no answer: ${errorMessage}` : "Gemini returned no answer.");
     }
 
     const envelope = buildProviderPrompt(request.prompt, request.retrieval);
@@ -140,5 +164,13 @@ export class GeminiProviderAdapter implements ProviderAdapter {
       citations: uniqueCitations([...envelope.vaultCitations, ...parsed.citations]),
       raw: payload,
     };
+  }
+}
+
+function safeParseJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
   }
 }

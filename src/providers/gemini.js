@@ -45,6 +45,20 @@ function parseGeminiResponse(payload) {
         citations: (0, utils_1.uniqueCitations)(citations),
     };
 }
+function sanitizeProviderErrorDetail(detail) {
+    const cleaned = detail?.replace(/\s+/g, " ").replace(/raw payload:.*$/i, "").trim();
+    return cleaned ? cleaned.slice(0, 240) : undefined;
+}
+function extractGeminiErrorMessage(payload) {
+    if (!payload || typeof payload !== "object") {
+        return undefined;
+    }
+    const record = payload;
+    const nestedError = record.error && typeof record.error === "object"
+        ? sanitizeProviderErrorDetail(record.error.message)
+        : undefined;
+    return nestedError ?? sanitizeProviderErrorDetail(record.message);
+}
 class GeminiProviderAdapter {
     constructor(settings) {
         this.settings = settings;
@@ -86,12 +100,13 @@ class GeminiProviderAdapter {
             payload = response.json;
         }
         catch (error) {
-            const detail = error instanceof Error ? error.message : String(error);
-            throw new Error(`Gemini request failed: ${detail}`);
+            const detail = sanitizeProviderErrorDetail(error instanceof Error ? error.message : String(error));
+            throw new Error(detail ? `Gemini request failed: ${detail}` : "Gemini request failed.");
         }
         const parsed = parseGeminiResponse(payload ?? {});
         if (!parsed.text) {
-            throw new Error(`Gemini returned an empty response. Raw payload: ${responseText.slice(0, 500)}`);
+            const errorMessage = extractGeminiErrorMessage(payload) ?? extractGeminiErrorMessage(safeParseJson(responseText));
+            throw new Error(errorMessage ? `Gemini returned no answer: ${errorMessage}` : "Gemini returned no answer.");
         }
         const envelope = (0, prompting_1.buildProviderPrompt)(request.prompt, request.retrieval);
         return {
@@ -104,3 +119,11 @@ class GeminiProviderAdapter {
     }
 }
 exports.GeminiProviderAdapter = GeminiProviderAdapter;
+function safeParseJson(text) {
+    try {
+        return JSON.parse(text);
+    }
+    catch {
+        return undefined;
+    }
+}

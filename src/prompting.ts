@@ -12,7 +12,15 @@ export function buildProviderPrompt(prompt: string, retrieval: RetrievalContext)
   );
 
   sections.push("You are answering inside an Obsidian knowledge workspace.");
-  sections.push("Prefer the provided vault context when it is relevant. If web search is enabled, use it only when it materially improves the answer.");
+  sections.push(
+    "Use vault context only when it is directly relevant to the user's request. If it is not directly relevant, ignore it completely and do not mention it.",
+  );
+  sections.push("If web search is enabled, use it only when it materially improves the answer.");
+  sections.push(
+    "Do not repeat the user's request. Do not greet the user. Do not say you are ObsiLLM. Do not add prefaces or commentary before the answer. Start directly with the requested output.",
+  );
+  sections.push("If the user asks for a title, outline, blog post, or draft, start with the title heading itself on the first line.");
+  sections.push("Never force an association between the user's request and a vault note unless the overlap is explicit and material.");
 
   if (retrieval.activeNote) {
     const activeNoteLines = [
@@ -40,7 +48,7 @@ export function buildProviderPrompt(prompt: string, retrieval: RetrievalContext)
 
   sections.push(`User request:\n${prompt}`);
   sections.push(
-    "Write in Markdown. Be explicit when information comes from the web. When vault notes are relevant, mention note titles naturally in the answer.",
+    "Write in Markdown. Be explicit when information comes from the web. Mention vault note titles only when they are directly relevant and genuinely helpful.",
   );
 
   return {
