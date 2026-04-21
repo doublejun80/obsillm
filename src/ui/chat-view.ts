@@ -219,6 +219,12 @@ export class ObsiLLMChatView extends ItemView {
   private populateModelOptions(provider: ProviderId, preferredModel: string): void {
     const options = getModelOptions(provider);
     this.modelSelect.empty();
+    if (options.length === 0) {
+      this.modelSelect.disabled = true;
+      return;
+    }
+
+    this.modelSelect.disabled = false;
     for (const model of options) {
       this.modelSelect.createEl("option", {
         value: model,
@@ -406,8 +412,9 @@ export class ObsiLLMChatView extends ItemView {
             ),
           );
           this.statusEl.setText(strings.copied);
-        } catch {
-          throw new Error(strings.clipboardError);
+        } catch (error) {
+          const detail = error instanceof Error ? `: ${error.message}` : "";
+          throw new Error(`${strings.clipboardError}${detail}`);
         }
       });
       this.createActionButton(actions, strings.moveToFile, async () => {

@@ -104,6 +104,7 @@ export async function applyResponseToWorkspace(
         : baseFolder;
 
     const noteContent = buildCreatedNoteContent(noteBody, response, {
+      language: settings.language,
       folderPath: folder ?? "",
       noteTitle,
     });
@@ -165,8 +166,9 @@ export async function createOutlineNotesFromResponse(
 
   for (const item of outlineItems) {
     const indexLabel = String(item.index).padStart(2, "0");
-    const body = buildOutlineChildBody(file.basename, item.title, item.children);
+    const body = buildOutlineChildBody(settings.language, file.basename, item.title, item.children);
     const contentWithProperties = buildCreatedNoteContent(body, response, {
+      language: settings.language,
       folderPath: targetFolder,
       noteTitle: item.title,
       parentNoteTitle: file.basename,
@@ -195,8 +197,7 @@ function getCurrentNoteFolder(app: App, preferredFile?: TFile | null): string | 
     return null;
   }
 
-  const separatorIndex = file.path.lastIndexOf("/");
-  return separatorIndex >= 0 ? file.path.slice(0, separatorIndex) : "";
+  return getFolderPathFromFile(file.path);
 }
 
 function buildTopicFolderPath(baseFolder: string, noteTitle: string): string {
@@ -205,7 +206,7 @@ function buildTopicFolderPath(baseFolder: string, noteTitle: string): string {
 }
 
 async function ensureParentNoteTopicFolder(app: App, settings: PluginSettings, file: TFile): Promise<string> {
-  const currentFolder = file.parent?.path ?? "";
+  const currentFolder = file.parent?.path ?? getFolderPathFromFile(file.path);
   const baseFolder = normalizePath(settings.createNoteFolder.trim());
 
   // If the parent note is already inside a topic folder, keep that structure.
@@ -224,6 +225,7 @@ async function ensureParentNoteTopicFolder(app: App, settings: PluginSettings, f
 }
 
 interface CreatedNoteOptions {
+  language?: AppLanguage;
   folderPath?: string;
   noteTitle?: string;
   parentNoteTitle?: string;
@@ -238,7 +240,15 @@ interface OutlineItem {
 }
 
 function escapeYamlDoubleQuoted(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .replace(/\t/g, "\\t")
+    .replace(/\u0008/g, "\\b")
+    .replace(/\f/g, "\\f")
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`);
 }
 
 function commonPrefixLength(left: string, right: string): number {
@@ -283,9 +293,12 @@ function stripLeadingBoilerplate(body: string): string {
     /^요청하신 내용을 바탕으로[^\n]*\n*/i,
     /^요청하신 내용은[^\n]*\n*/i,
     /^제안을 드립니다[^\n]*\n*/i,
+    /^[^\n]*환영합니다[^\n]*\n*/i,
     /^based on your request[^\n]*\n*/i,
+    /^[^\n]*welcome[^\n]*\n*/i,
     /^here (is|are)[^\n]*\n*/i,
     /^ご依頼の内容をもとに[^\n]*\n*/i,
+    /^[^\n]*ようこそ[^\n]*\n*/i,
     /^以下[^\n]*\n*/i,
   ];
 
@@ -351,7 +364,8 @@ function buildCreatedNoteContent(body: string, response: ChatResponse, options: 
     "-",
   );
   const noteTitle = options.noteTitle ?? deriveNoteTitle(body, "");
-  const tags = deriveContextTags(noteTitle, body, options.folderPath ?? "", options.extraTagSources ?? []);
+  const language = options.language ?? "en";
+  const tags = deriveContextTags(noteTitle, body, options.folderPath ?? "", options.extraTagSources ?? [], language);
   const metadata = [
     "---",
     `created: ${created}`,
@@ -491,17 +505,18 @@ function cleanStructuredLabel(value: string): string {
     .trim();
 }
 
-function buildOutlineChildBody(parentTitle: string, childTitle: string, children: string[]): string {
+function buildOutlineChildBody(language: AppLanguage, parentTitle: string, childTitle: string, children: string[]): string {
+  const strings = getStrings(language);
   const detailLines =
-    children.length > 0 ? children.map((child) => `- ${child}`) : ["- 이 대주제의 세부 항목을 정리하세요."];
+    children.length > 0 ? children.map((child) => `- ${child}`) : [`- ${strings.outlineDetailPlaceholder}`];
 
   return [
-    `상위 주제: [[${parentTitle}]]`,
+    `${strings.outlineParentLabel}: [[${parentTitle}]]`,
     "",
-    "## 세부 주제",
+    `## ${strings.outlineDetailHeading}`,
     ...detailLines,
     "",
-    "## 초안",
+    `## ${strings.outlineDraftHeading}`,
     "",
   ].join("\n");
 }
@@ -510,7 +525,13 @@ function stripFrontmatter(content: string): string {
   return content.replace(/^\s*---\n[\s\S]*?\n---\n*/, "").trim();
 }
 
-function deriveContextTags(title: string, body: string, folderPath: string, extraSources: string[]): string[] {
+function deriveContextTags(
+  title: string,
+  body: string,
+  folderPath: string,
+  extraSources: string[],
+  language: AppLanguage,
+): string[] {
   const phrases = [
     folderPath.split("/").filter(Boolean).pop() ?? "",
     title,
@@ -534,7 +555,7 @@ function deriveContextTags(title: string, body: string, folderPath: string, extr
     }
   }
 
-  return tags.length > 0 ? tags : ["기타"];
+  return tags.length > 0 ? tags : [getStrings(language).fallbackTag];
 }
 
 function isGenericSectionLabel(value: string): boolean {
@@ -917,4 +938,9 @@ function deriveNoteTitle(content: string, fallback: string): string {
   }
 
   return fallback;
+}
+
+function getFolderPathFromFile(filePath: string): string {
+  const separatorIndex = filePath.lastIndexOf("/");
+  return separatorIndex >= 0 ? filePath.slice(0, separatorIndex) : "";
 }

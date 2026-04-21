@@ -156,8 +156,12 @@ export function parseOpenAIResponse(payload: OpenAIResponsePayload): { text: str
   };
 }
 
-function sanitizeProviderErrorDetail(detail: string | undefined): string | undefined {
-  const cleaned = detail?.replace(/\s+/g, " ").replace(/raw payload:.*$/i, "").trim();
+function sanitizeProviderErrorDetail(detail: unknown): string | undefined {
+  if (detail == null || typeof detail !== "string") {
+    return undefined;
+  }
+
+  const cleaned = detail.replace(/\s+/g, " ").replace(/raw payload:.*$/i, "").trim();
   return cleaned ? cleaned.slice(0, 240) : undefined;
 }
 
@@ -167,12 +171,12 @@ function extractOpenAIErrorMessage(payload: unknown): string | undefined {
   }
 
   const record = payload as Record<string, unknown>;
+  const nestedMessage =
+    record.error && typeof record.error === "object" ? (record.error as Record<string, unknown>).message : undefined;
   const nestedError =
-    record.error && typeof record.error === "object"
-      ? sanitizeProviderErrorDetail((record.error as Record<string, unknown>).message as string | undefined)
-      : undefined;
+    typeof nestedMessage === "string" ? sanitizeProviderErrorDetail(nestedMessage) : undefined;
 
-  return nestedError ?? sanitizeProviderErrorDetail(record.message as string | undefined);
+  return nestedError ?? (typeof record.message === "string" ? sanitizeProviderErrorDetail(record.message) : undefined);
 }
 
 export class OpenAIProviderAdapter implements ProviderAdapter {

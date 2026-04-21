@@ -263,9 +263,36 @@
   word-break: break-word;
 }
 
+.obsillm-message-body .markdown-rendered,
+.obsillm-message-body .markdown-preview-view,
+.obsillm-message-body .markdown-preview-sizer,
+.obsillm-message-body .markdown-preview-section {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.obsillm-message-body .markdown-rendered {
+  --file-line-width: 100%;
+}
+
 .obsillm-message-body * {
   user-select: text;
   -webkit-user-select: text;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.obsillm-message-body h1,
+.obsillm-message-body h2,
+.obsillm-message-body h3,
+.obsillm-message-body h4,
+.obsillm-message-body h5,
+.obsillm-message-body h6,
+.obsillm-message-body p,
+.obsillm-message-body li,
+.obsillm-message-body blockquote {
   max-width: 100%;
   overflow-wrap: anywhere;
   word-break: break-word;

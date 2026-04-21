@@ -1,4 +1,4 @@
-import { MarkdownView, Plugin, TFile } from "obsidian";
+import { MarkdownView, Notice, Plugin, TFile } from "obsidian";
 
 import { getDefaultSystemPrompt, getStrings, isDefaultSystemPrompt } from "./i18n";
 import { applyResponseToWorkspace, createOutlineNotesFromResponse, stripPromptEcho } from "./insertion";
@@ -114,7 +114,14 @@ export default class ObsiLLMPlugin extends Plugin {
 
   async loadSettings(): Promise<void> {
     const loaded = (await this.loadData()) as Partial<PluginSettings> | null;
-    const language = (loaded?.language as AppLanguage | undefined) ?? DEFAULT_SETTINGS.language;
+    const loadedLanguage: string | undefined = typeof loaded?.language === "string" ? loaded.language : undefined;
+    const shouldPersistLanguageMigration = loadedLanguage === "jp";
+    const language =
+      loadedLanguage === "jp"
+        ? "ja"
+        : loadedLanguage === "en" || loadedLanguage === "ko" || loadedLanguage === "ja"
+          ? loadedLanguage
+          : DEFAULT_SETTINGS.language;
     const openaiModel = loaded?.openai?.model?.trim();
     const geminiModel = loaded?.gemini?.model?.trim();
     const systemPrompt =
@@ -143,6 +150,10 @@ export default class ObsiLLMPlugin extends Plugin {
               : getDefaultModel("gemini"),
       },
     };
+
+    if (shouldPersistLanguageMigration) {
+      await this.saveSettings();
+    }
   }
 
   async saveSettings(): Promise<void> {
@@ -378,8 +389,10 @@ export default class ObsiLLMPlugin extends Plugin {
 
   private async buildAutoDraftContext(file: TFile): Promise<AutoDraftContext> {
     const noteContent = await this.app.vault.cachedRead(file);
-    const detailHeading = detectSectionHeading(noteContent, DETAIL_SECTION_CANDIDATES) ?? DETAIL_SECTION_CANDIDATES.ko;
-    const draftHeading = detectSectionHeading(noteContent, DRAFT_SECTION_CANDIDATES) ?? DRAFT_SECTION_CANDIDATES.ko;
+    const detailHeading =
+      detectSectionHeading(noteContent, DETAIL_SECTION_CANDIDATES) ?? DETAIL_SECTION_CANDIDATES[this.settings.language];
+    const draftHeading =
+      detectSectionHeading(noteContent, DRAFT_SECTION_CANDIDATES) ?? DRAFT_SECTION_CANDIDATES[this.settings.language];
     const detailItems = extractListItems(extractSectionBody(noteContent, detailHeading));
     const meaningfulDetailItems = detailItems.filter((item) => !isPlaceholderDetailItem(item));
     const parentPath = extractParentNotePath(noteContent);
@@ -495,12 +508,17 @@ export default class ObsiLLMPlugin extends Plugin {
       id: "draft-from-current-note",
       name: strings.draftCurrentNoteCommand,
       callback: async () => {
-        await this.autoDraftCurrentNote({
-          provider: this.settings.defaultProvider,
-          model: this.getModelForProvider(this.settings.defaultProvider),
-          useVault: true,
-          useWeb: false,
-        });
+        try {
+          await this.autoDraftCurrentNote({
+            provider: this.settings.defaultProvider,
+            model: this.getModelForProvider(this.settings.defaultProvider),
+            useVault: true,
+            useWeb: false,
+          });
+          new Notice(strings.draftCommandSuccess);
+        } catch (error) {
+          new Notice(error instanceof Error ? error.message : String(error));
+        }
       },
     });
 
@@ -508,12 +526,17 @@ export default class ObsiLLMPlugin extends Plugin {
       id: "draft-all-child-notes",
       name: strings.draftChildNotesCommand,
       callback: async () => {
-        await this.autoDraftChildNotes({
-          provider: this.settings.defaultProvider,
-          model: this.getModelForProvider(this.settings.defaultProvider),
-          useVault: true,
-          useWeb: false,
-        });
+        try {
+          await this.autoDraftChildNotes({
+            provider: this.settings.defaultProvider,
+            model: this.getModelForProvider(this.settings.defaultProvider),
+            useVault: true,
+            useWeb: false,
+          });
+          new Notice(strings.draftCommandSuccess);
+        } catch (error) {
+          new Notice(error instanceof Error ? error.message : String(error));
+        }
       },
     });
 
@@ -576,26 +599,55 @@ export default class ObsiLLMPlugin extends Plugin {
 const DETAIL_SECTION_CANDIDATES: Record<AppLanguage, string> = {
   en: "Details",
   ko: "세부 주제",
-  jp: "詳細トピック",
+  ja: "詳細トピック",
 };
 
 const DRAFT_SECTION_CANDIDATES: Record<AppLanguage, string> = {
   en: "Draft",
   ko: "초안",
-  jp: "下書き",
+  ja: "下書き",
 };
+
+function getLocalizedListPlaceholder(language: AppLanguage): string {
+  return getStrings(language).emptyListPlaceholder;
+}
+
+function getLocalizedSiblingPlaceholder(language: AppLanguage): string {
+  return getStrings(language).emptySiblingPlaceholder;
+}
+
+function getLocalizedParentOutlinePlaceholder(language: AppLanguage): string {
+  return getStrings(language).missingParentOutlinePlaceholder;
+}
+
+function getAutoDraftFallbackLanguage(context: AutoDraftContext): AppLanguage {
+  return findLanguageForHeading(context.detailHeading, context.draftHeading);
+}
+
+function findLanguageForHeading(detailHeading: string, draftHeading: string): AppLanguage {
+  for (const language of Object.keys(DETAIL_SECTION_CANDIDATES) as AppLanguage[]) {
+    if (DETAIL_SECTION_CANDIDATES[language] === detailHeading || DRAFT_SECTION_CANDIDATES[language] === draftHeading) {
+      return language;
+    }
+  }
+  return "en";
+}
 
 function buildAutoDraftPrompt(language: AppLanguage, context: AutoDraftContext): string {
   const detailHeading = context.detailHeading;
   const draftHeading = context.draftHeading;
   const siblingBlock =
-    context.siblingTitles.length > 0 ? context.siblingTitles.map((title) => `- ${title}`).join("\n") : "- 없음";
+    context.siblingTitles.length > 0
+      ? context.siblingTitles.map((title) => `- ${title}`).join("\n")
+      : `- ${getLocalizedSiblingPlaceholder(language)}`;
   const existingDetails =
-    context.detailItems.length > 0 ? context.detailItems.map((item) => `- ${item}`).join("\n") : "- 비어 있음";
-  const parentOutline = context.parentOutline || "- 부모 목차를 찾지 못했습니다.";
+    context.detailItems.length > 0
+      ? context.detailItems.map((item) => `- ${item}`).join("\n")
+      : `- ${getLocalizedListPlaceholder(language)}`;
+  const parentOutline = context.parentOutline || `- ${getLocalizedParentOutlinePlaceholder(language)}`;
   const noteBody = truncate(stripFrontmatter(context.noteContent), 4500);
 
-  if (language === "jp") {
+  if (language === "ja") {
     return [
       "Obsidian の子ノート 1 件を埋めてください。",
       `出力は必ず次の 2 セクションだけにしてください: \`## ${detailHeading}\` と \`## ${draftHeading}\``,
@@ -665,13 +717,13 @@ function parseAutoDraftResponse(text: string, context: AutoDraftContext): Parsed
     extractSectionBody(text, context.detailHeading) ??
     extractSectionBody(text, DETAIL_SECTION_CANDIDATES.ko) ??
     extractSectionBody(text, DETAIL_SECTION_CANDIDATES.en) ??
-    extractSectionBody(text, DETAIL_SECTION_CANDIDATES.jp) ??
+    extractSectionBody(text, DETAIL_SECTION_CANDIDATES.ja) ??
     "";
   const draftSection =
     extractSectionBody(text, context.draftHeading) ??
     extractSectionBody(text, DRAFT_SECTION_CANDIDATES.ko) ??
     extractSectionBody(text, DRAFT_SECTION_CANDIDATES.en) ??
-    extractSectionBody(text, DRAFT_SECTION_CANDIDATES.jp);
+    extractSectionBody(text, DRAFT_SECTION_CANDIDATES.ja);
 
   const detailItems = extractListItems(detailSection);
   const fallbackDetailItems = context.detailItems.filter((item) => !isPlaceholderDetailItem(item));
@@ -682,10 +734,10 @@ function parseAutoDraftResponse(text: string, context: AutoDraftContext): Parsed
       context.draftHeading,
       DETAIL_SECTION_CANDIDATES.ko,
       DETAIL_SECTION_CANDIDATES.en,
-      DETAIL_SECTION_CANDIDATES.jp,
+      DETAIL_SECTION_CANDIDATES.ja,
       DRAFT_SECTION_CANDIDATES.ko,
       DRAFT_SECTION_CANDIDATES.en,
-      DRAFT_SECTION_CANDIDATES.jp,
+      DRAFT_SECTION_CANDIDATES.ja,
     ],
   );
 
@@ -696,12 +748,13 @@ function parseAutoDraftResponse(text: string, context: AutoDraftContext): Parsed
 }
 
 function applyAutoDraftToContent(content: string, parsed: ParsedAutoDraft, context: AutoDraftContext): string {
+  const strings = getStrings(getAutoDraftFallbackLanguage(context));
   const detailItems = parsed.detailItems.length > 0 ? parsed.detailItems : context.detailItems;
   const detailBody =
     detailItems.length > 0
       ? detailItems.map((item) => `- ${item}`).join("\n")
-      : "- 이 노트의 세부 주제를 정리하세요.";
-  const draftBody = parsed.draftBody || "- 본문을 생성하지 못했습니다.";
+      : `- ${strings.autoDraftDetailPlaceholder}`;
+  const draftBody = parsed.draftBody || `- ${strings.autoDraftBodyPlaceholder}`;
 
   let next = upsertSecondLevelSection(content, context.detailHeading, detailBody);
   next = upsertSecondLevelSection(next, context.draftHeading, draftBody);

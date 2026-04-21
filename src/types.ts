@@ -1,5 +1,5 @@
 export type ProviderId = "openai" | "gemini";
-export type AppLanguage = "en" | "ko" | "jp";
+export type AppLanguage = "en" | "ko" | "ja";
 
 export type InsertionMode = "insert-cursor" | "replace-selection" | "create-note" | "create-note-current-folder";
 

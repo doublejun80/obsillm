@@ -71,7 +71,7 @@ describe("Insertion helpers", () => {
 
     expect(buildInsertionMarkdown(response, "en", true)).toContain("## Sources");
     expect(buildInsertionMarkdown(response, "en", true)).toContain("[[Notes/Plan|Plan]]");
-    expect(buildInsertionMarkdown(response, "en", true)).toContain("[Example](https://example.com)");
+    expect(buildInsertionMarkdown(response, "en", true)).toContain("[Example](https://example.com/)");
   });
 
   it("strips an echoed prompt from the start of the answer", () => {
@@ -228,6 +228,15 @@ describe("Insertion helpers", () => {
 
   it("groups bullet subtopics under each top-level outline note", async () => {
     const created: { path: string; content: string }[] = [];
+    const parentFile = {
+      path: "Drafts/Obsidian 완벽 가이드.md",
+      name: "Obsidian 완벽 가이드.md",
+      basename: "Obsidian 완벽 가이드",
+      parent: {
+        path: "Drafts",
+        name: "Drafts",
+      },
+    };
     const response: ChatResponse = {
       provider: "gemini",
       model: "gemini-3.1-flash-lite-preview",
@@ -244,12 +253,18 @@ describe("Insertion helpers", () => {
         getAbstractFileByPath: () => null,
         createFolder: async () => undefined,
       },
+      fileManager: {
+        renameFile: async (file: typeof parentFile, nextPath: string) => {
+          file.path = nextPath;
+          file.parent = {
+            path: "Drafts/Obsidian 완벽 가이드",
+            name: "Obsidian 완벽 가이드",
+          };
+        },
+      },
       workspace: {
         getActiveViewOfType: () => ({
-          file: {
-            path: "Drafts/Obsidian 완벽 가이드.md",
-            basename: "Obsidian 완벽 가이드",
-          },
+          file: parentFile,
         }),
       },
     } as never;
@@ -275,11 +290,13 @@ describe("Insertion helpers", () => {
     );
 
     expect(count).toBe(2);
-    expect(created[0].path).toBe("Drafts/01. Obsidian 입문 두뇌의 확장.md");
+    expect(created[0].path).toBe("Drafts/Obsidian 완벽 가이드/01. Obsidian 입문 두뇌의 확장.md");
     expect(created[0].content).toContain("## 세부 주제");
+    expect(created[0].content).toContain('parent_note: "[[Obsidian 완벽 가이드]]"');
+    expect(created[0].content).toContain('parent_note_path: "Drafts/Obsidian 완벽 가이드/Obsidian 완벽 가이드.md"');
     expect(created[0].content).toContain("- Obsidian이란 무엇인가: 로컬 마크다운 기반의 지식 관리");
     expect(created[0].content).toContain("- 설치 및 기본 설정: 보관소(Vault) 생성과 동기화 전략");
-    expect(created[1].path).toBe("Drafts/02. 핵심 기능 파헤치기.md");
+    expect(created[1].path).toBe("Drafts/Obsidian 완벽 가이드/02. 핵심 기능 파헤치기.md");
     expect(created[1].content).toContain("- 양방향 링크(Backlinks)와 지식의 연결");
   });
 });

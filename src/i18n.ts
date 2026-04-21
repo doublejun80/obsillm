@@ -6,7 +6,7 @@ const LEGACY_DEFAULT_SYSTEM_PROMPT =
 export const DEFAULT_SYSTEM_PROMPTS: Record<AppLanguage, string> = {
   en: `${LEGACY_DEFAULT_SYSTEM_PROMPT} Answer in English unless the user explicitly asks for another language. Do not repeat the user's request. Do not greet the user. Do not say you are ObsiLLM. Do not add prefaces like 'Here is a proposal' or 'Based on your request'. Start directly with the deliverable in Markdown. If the user asks for a title, outline, article, or draft, start with the title itself as the first heading.`,
   ko: "당신은 ObsiLLM이며, Obsidian에서 동작하는 글쓰기 도우미입니다. 사용자가 다른 언어를 명시하지 않으면 항상 한국어로 답변하세요. 간결하고 근거 있는 Markdown으로 작성하고, vault 문맥이 관련 있을 때 우선 활용하세요. 웹 정보를 사용했다면 노트 기반 정보와 명확히 구분하세요. 사용자의 요청을 다시 쓰지 마세요. 인사말을 쓰지 마세요. 자신을 ObsiLLM이라고 소개하지 마세요. '요청하신 내용을 바탕으로', '제안을 드립니다' 같은 말머리를 쓰지 마세요. 바로 결과물부터 시작하세요. 제목, 목차, 초안, 글 구조를 요청받으면 첫 줄은 바로 제목 헤딩으로 시작하세요.",
-  jp: "あなたは ObsiLLM であり、Obsidian 上で動作する文章支援アシスタントです。ユーザーが別の言語を明示しない限り、常に日本語で回答してください。簡潔で根拠のある Markdown を書き、vault の文脈が関連する場合は優先して活用してください。Web 情報を使った場合はノート由来の情報と明確に区別してください。ユーザーの依頼を言い直さないでください。挨拶を書かないでください。ObsiLLM と自己紹介しないでください。『ご依頼の内容をもとに』のような前置きを書かず、結果から始めてください。タイトルや構成案、下書きを求められたら、最初の行をそのままタイトル見出しにしてください。",
+  ja: "あなたは ObsiLLM であり、Obsidian 上で動作する文章支援アシスタントです。ユーザーが別の言語を明示しない限り、常に日本語で回答してください。簡潔で根拠のある Markdown を書き、vault の文脈が関連する場合は優先して活用してください。Web 情報を使った場合はノート由来の情報と明確に区別してください。ユーザーの依頼を言い直さないでください。挨拶を書かないでください。ObsiLLM と自己紹介しないでください。『ご依頼の内容をもとに』のような前置きを書かず、結果から始めてください。タイトルや構成案、下書きを求められたら、最初の行をそのままタイトル見出しにしてください。",
 };
 
 export function getDefaultSystemPrompt(language: AppLanguage): string {
@@ -19,13 +19,7 @@ export function isDefaultSystemPrompt(value: string | null | undefined): boolean
     return true;
   }
 
-  return (
-    normalized === LEGACY_DEFAULT_SYSTEM_PROMPT ||
-    normalized.startsWith("You are ObsiLLM") ||
-    normalized.startsWith("당신은 ObsiLLM") ||
-    normalized.startsWith("あなたは ObsiLLM") ||
-    Object.values(DEFAULT_SYSTEM_PROMPTS).includes(normalized)
-  );
+  return normalized === LEGACY_DEFAULT_SYSTEM_PROMPT || Object.values(DEFAULT_SYSTEM_PROMPTS).includes(normalized);
 }
 
 const STRINGS = {
@@ -121,6 +115,7 @@ const STRINGS = {
     autoDraftProgress: "Drafting",
     currentNoteAutoDrafted: "Drafted the current note.",
     childNotesAutoDrafted: "Drafted child notes:",
+    draftCommandSuccess: "Auto-draft finished.",
     sources: "Sources",
     vaultOn: "Vault",
     vaultOff: "No vault",
@@ -138,6 +133,16 @@ const STRINGS = {
     noSelection: "Select some text before using Replace selection.",
     createdNotice: "Created",
     clipboardError: "Unable to copy the answer to the clipboard.",
+    outlineParentLabel: "Parent topic",
+    outlineDetailHeading: "Details",
+    outlineDraftHeading: "Draft",
+    outlineDetailPlaceholder: "Outline the key subtopics for this section.",
+    emptyListPlaceholder: "Empty",
+    emptySiblingPlaceholder: "None",
+    missingParentOutlinePlaceholder: "Parent outline not found.",
+    autoDraftDetailPlaceholder: "Outline the key subtopics for this note.",
+    autoDraftBodyPlaceholder: "The draft body could not be generated.",
+    fallbackTag: "Other",
   },
   ko: {
     ribbonOpen: "ObsiLLM 열기",
@@ -230,6 +235,7 @@ const STRINGS = {
     autoDraftProgress: "자동 작성 중",
     currentNoteAutoDrafted: "현재 노트 초안을 채웠습니다.",
     childNotesAutoDrafted: "하위 노트 초안을 채웠습니다:",
+    draftCommandSuccess: "자동 작성이 완료되었습니다.",
     sources: "출처",
     vaultOn: "Vault",
     vaultOff: "Vault 끔",
@@ -247,8 +253,18 @@ const STRINGS = {
     noSelection: "선택 교체를 쓰려면 먼저 텍스트를 선택하세요.",
     createdNotice: "생성됨",
     clipboardError: "답변을 클립보드에 복사하지 못했습니다.",
+    outlineParentLabel: "상위 주제",
+    outlineDetailHeading: "세부 주제",
+    outlineDraftHeading: "초안",
+    outlineDetailPlaceholder: "이 대주제의 세부 항목을 정리하세요.",
+    emptyListPlaceholder: "비어 있음",
+    emptySiblingPlaceholder: "없음",
+    missingParentOutlinePlaceholder: "부모 목차를 찾지 못했습니다.",
+    autoDraftDetailPlaceholder: "이 노트의 세부 주제를 정리하세요.",
+    autoDraftBodyPlaceholder: "본문을 생성하지 못했습니다.",
+    fallbackTag: "기타",
   },
-  jp: {
+  ja: {
     ribbonOpen: "ObsiLLM を開く",
     openChatCommand: "ObsiLLM チャットを開く",
     askAboutCurrentNoteCommand: "現在のノートについて ObsiLLM に聞く",
@@ -339,6 +355,7 @@ const STRINGS = {
     autoDraftProgress: "下書き中",
     currentNoteAutoDrafted: "現在のノートを下書きしました。",
     childNotesAutoDrafted: "子ノートを下書きしました:",
+    draftCommandSuccess: "自動下書きが完了しました。",
     sources: "出典",
     vaultOn: "Vault",
     vaultOff: "Vault オフ",
@@ -356,6 +373,16 @@ const STRINGS = {
     noSelection: "選択置換を使う前にテキストを選択してください。",
     createdNotice: "作成しました",
     clipboardError: "回答をクリップボードへコピーできませんでした。",
+    outlineParentLabel: "親テーマ",
+    outlineDetailHeading: "詳細トピック",
+    outlineDraftHeading: "下書き",
+    outlineDetailPlaceholder: "この大項目の詳細トピックを整理してください。",
+    emptyListPlaceholder: "空",
+    emptySiblingPlaceholder: "なし",
+    missingParentOutlinePlaceholder: "親の目次が見つかりませんでした。",
+    autoDraftDetailPlaceholder: "このノートの詳細トピックを整理してください。",
+    autoDraftBodyPlaceholder: "本文を生成できませんでした。",
+    fallbackTag: "その他",
   },
 } as const;
 

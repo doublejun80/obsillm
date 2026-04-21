@@ -49,11 +49,15 @@ export class ObsiLLMSettingTab extends PluginSettingTab {
         dropdown
           .addOption("en", strings.languageEn)
           .addOption("ko", strings.languageKo)
-          .addOption("jp", strings.languageJp)
+          .addOption("ja", strings.languageJp)
           .setValue(this.plugin.settings.language)
           .onChange(async (value) => {
+            const previousLanguage = this.plugin.settings.language;
+            const previousDefaultPrompt = getDefaultSystemPrompt(previousLanguage);
             this.plugin.settings.language = value as AppLanguage;
-            this.plugin.settings.systemPrompt = getDefaultSystemPrompt(this.plugin.settings.language);
+            if (this.plugin.settings.systemPrompt.trim() === previousDefaultPrompt) {
+              this.plugin.settings.systemPrompt = getDefaultSystemPrompt(this.plugin.settings.language);
+            }
             await this.plugin.saveSettings();
             await this.plugin.refreshChatViews();
             this.display();
